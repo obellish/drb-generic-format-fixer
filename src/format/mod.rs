@@ -12,7 +12,7 @@ pub use self::{barcode::Barcode, common::*, text::*};
 #[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Format {
 	#[serde(rename = "labelBarcodes")]
-	pub barcodes: [Barcode; 2],
+	pub barcodes: Vec<Barcode>,
 	#[serde(rename = "labelTexts")]
 	pub texts: Vec<Text>,
 	#[serde(flatten)]

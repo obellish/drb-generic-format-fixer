@@ -4,7 +4,7 @@ use anyhow::Result;
 use clap::Parser as _;
 use color_print::cprintln;
 use drb_generic_format_fixer::{
-	format::{CharSize, DataSource, Format, Position},
+	format::{Barcode, CharSize, DataSource, Format, Position, Text},
 	Args,
 };
 use walkdir::WalkDir;
@@ -29,10 +29,12 @@ fn main() -> Result<()> {
 		.filter_map(std::result::Result::ok);
 
 	let mut errors = 0usize;
+	let mut skipped = 0usize;
 	let mut files_open = 0usize;
 	let mut files_modified = 0usize;
 	for entry in entries {
 		let path = entry.path();
+		let displayable = path.display();
 
 		let Ok(mut file) = OpenOptions::new().read(true).write(true).open(path) else {
 			continue;
@@ -48,11 +50,29 @@ fn main() -> Result<()> {
 		let mut format = match serde_json::from_reader::<_, Format>(&file) {
 			Ok(f) => f,
 			Err(e) => {
-				cprintln!("{} - <r!>{e}", path.display());
+				cprintln!("{displayable} - <r!>{e}");
 				errors += 1;
 				continue;
 			}
 		};
+
+		let barcode_count = format.barcodes.len();
+
+		if barcode_count != 2 {
+			cprintln!("{displayable} - <r!>expected 2 barcodes, got {barcode_count}");
+			skipped += 1;
+			continue;
+		}
+
+		if format
+			.barcodes
+			.iter()
+			.any(|b| b.position.x >= 1300 || b.position.y >= 1300)
+		{
+			cprintln!("{displayable} - <r!>barcode outside visible range");
+			skipped += 1;
+			continue;
+		}
 
 		file.rewind()?;
 
@@ -63,17 +83,41 @@ fn main() -> Result<()> {
 
 			files_modified += 1;
 
-			cprintln!("{} - <b!>modified", path.display());
+			cprintln!("{displayable} - <b!>modified");
 		} else {
-			cprintln!("{} - <g!>not modified", path.display());
+			cprintln!("{displayable} - <g!>not modified");
 		}
 	}
 
 	println!("errors: {errors}");
+	println!("skipped: {skipped}");
 	println!("total formats: {files_open}");
 	println!("formats modified: {files_modified}");
 
 	Ok(())
+}
+
+fn modify(format: &mut Format) -> bool {
+	let original = format.clone();
+
+	// Barcodes
+	modify_barcodes(&mut format.barcodes);
+
+	// Text
+	modify_fastpass_text(&mut format.texts);
+	modify_index_text(&mut format.texts);
+	modify_part_number_text(&mut format.texts);
+	modify_human_readable_text(&mut format.texts);
+
+	*format != original
+}
+
+fn modify_barcodes(barcodes: &mut [Barcode]) {
+	barcodes[0].position = Position { x: 140, y: 515 };
+	barcodes[0].height = 113;
+
+	barcodes[1].position = Position { x: 140, y: 735 };
+	barcodes[1].height = 113;
 }
 
 const DEFAULT_CHAR_SIZE: CharSize = CharSize {
@@ -81,21 +125,10 @@ const DEFAULT_CHAR_SIZE: CharSize = CharSize {
 	height: 35,
 };
 
-fn modify(format: &mut Format) -> bool {
-	let original = format.clone();
-
-	// Barcodes
-	format.barcodes[0].position = Position { x: 140, y: 515 };
-	format.barcodes[0].height = 113;
-
-	format.barcodes[1].position = Position { x: 140, y: 735 };
-	format.barcodes[1].height = 113;
-
-	// Text
+fn modify_fastpass_text(texts: &mut [Text]) {
 	let mut first_text = true;
 
-	for text in format
-		.texts
+	for text in texts
 		.iter_mut()
 		.filter(|t| matches!(t.data_source, DataSource::Fixed) && t.data == "FastPass")
 	{
@@ -107,6 +140,52 @@ fn modify(format: &mut Format) -> bool {
 		}
 		text.size = DEFAULT_CHAR_SIZE;
 	}
+}
 
-	*format != original
+fn modify_human_readable_text(texts: &mut [Text]) {
+	let mut first_text = true;
+
+	for text in texts
+		.iter_mut()
+		.filter(|t| matches!(t.data_source, DataSource::HumanReadable))
+	{
+		if first_text {
+			text.position = Position { x: 380, y: 640 };
+			first_text = false;
+		} else {
+			text.position = Position { x: 380, y: 860 };
+		}
+		text.size = DEFAULT_CHAR_SIZE;
+	}
+}
+
+fn modify_index_text(texts: &mut [Text]) {
+	let index = texts
+		.iter_mut()
+		.find(|t| matches!(t.data_source, DataSource::Index));
+
+	if let Some(index) = index {
+		index.position = Position { x: 85, y: 85 };
+		index.size = CharSize {
+			width: 30,
+			height: 30,
+		};
+	}
+}
+
+fn modify_part_number_text(texts: &mut [Text]) {
+	let part_num = texts.iter_mut().find(|t| {
+		matches!(
+			t.data_source,
+			DataSource::Partnum | DataSource::PartnumShorthand
+		)
+	});
+
+	if let Some(part_num) = part_num {
+		part_num.position = Position { x: 300, y: 360 };
+		part_num.size = CharSize {
+			width: 35,
+			height: 35,
+		};
+	}
 }

@@ -28,6 +28,7 @@ pub enum DataSource {
 	Partnum,
 	#[serde(rename = "PN")]
 	PartnumShorthand,
+	Barcode,
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
