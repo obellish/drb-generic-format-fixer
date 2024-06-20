@@ -2,6 +2,7 @@ use std::fs;
 
 use anyhow::Result;
 use clap::Parser as _;
+use color_print::cprintln;
 use drb_generic_format_fixer::{format::Format, Args};
 use walkdir::WalkDir;
 
@@ -22,8 +23,7 @@ fn main() -> Result<()> {
 
 	let mut errors = 0usize;
 	let mut files_open = 0usize;
-	let mut files_succeeded = 0usize;
-
+	let mut files_modified = 0usize;
 	for entry in entries {
 		let path = entry.path();
 
@@ -37,20 +37,35 @@ fn main() -> Result<()> {
 
 		files_open += 1;
 
-		println!("{}", path.display());
+		let mut format = match serde_json::from_str::<Format>(&data) {
+			Ok(f) => f,
+			Err(e) => {
+				println!("failed to parse: {e}");
+				errors += 1;
+				continue;
+			}
+		};
 
-		if let Err(e) = serde_json::from_str::<Format>(&data) {
-			println!("failed to parse: {e}");
-			errors += 1;
-			continue;
+		if modify(&mut format) {
+			let file = fs::File::open(path)?;
+
+			serde_json::to_writer(file, &format)?;
+
+			files_modified += 1;
+
+			cprintln!("{} - <green>modified</>", path.display());
+		} else {
+			cprintln!("{} - <red>not modified</>", path.display());
 		}
-
-		files_succeeded += 1;
 	}
 
 	println!("errors: {errors}");
-	println!("JSON files: {files_open}");
-	println!("Format files: {files_succeeded}");
+	println!("total formats: {files_open}");
+	println!("formats modified: {files_modified}");
 
 	Ok(())
+}
+
+fn modify(_: &mut Format) -> bool {
+	false
 }
