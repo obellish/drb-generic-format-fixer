@@ -1,4 +1,4 @@
-use std::fs;
+use std::{fs, io::Seek};
 
 use anyhow::Result;
 use clap::Parser as _;
@@ -27,17 +27,22 @@ fn main() -> Result<()> {
 	for entry in entries {
 		let path = entry.path();
 
-		let Ok(data) = fs::read_to_string(path) else {
+		let Ok(mut file) = fs::File::open(path) else {
 			continue;
 		};
 
-		if serde_json::from_str::<serde_json::Value>(&data).is_err() {
+		// let Ok(data) = fs::read_to_string(path) else {
+		// 	continue;
+		// };
+
+		if serde_json::from_reader::<_, serde_json::Value>(&file).is_err() {
 			continue;
 		}
 
 		files_open += 1;
+		file.rewind()?;
 
-		let mut format = match serde_json::from_str::<Format>(&data) {
+		let mut format = match serde_json::from_reader::<_, Format>(&file) {
 			Ok(f) => f,
 			Err(e) => {
 				println!("failed to parse: {e}");
@@ -46,9 +51,9 @@ fn main() -> Result<()> {
 			}
 		};
 
-		if modify(&mut format) {
-			let file = fs::File::open(path)?;
+		file.rewind()?;
 
+		if modify(&mut format) {
 			serde_json::to_writer(file, &format)?;
 
 			files_modified += 1;
