@@ -1,3 +1,7 @@
+[alias]
+rd = ["run", "--", "-i", "T:\\MPI Special Print Tool\\DRB 1 Pass\\Blast Car Wash"]
+rr = ["run", "--release", "--", "-i", "T:\\MPI Special Print Tool\\DRB 1 Pass"]
+
 [target.'cfg(not(target_arch = "wasm32"))']
 rustflags = ["-C", "target-cpu=native", "--cfg", "tokio_unstable"]
 

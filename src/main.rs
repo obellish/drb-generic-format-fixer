@@ -1,9 +1,12 @@
-use std::{fs, io::Seek};
+use std::{fs::OpenOptions, io::Seek, thread, time::Duration};
 
 use anyhow::Result;
 use clap::Parser as _;
 use color_print::cprintln;
-use drb_generic_format_fixer::{format::Format, Args};
+use drb_generic_format_fixer::{
+	format::{CharSize, DataSource, Format, Position},
+	Args,
+};
 use walkdir::WalkDir;
 
 #[allow(warnings)]
@@ -16,6 +19,10 @@ fn main() -> Result<()> {
 		}
 	};
 
+	println!("Size of format: {} bytes", size_of::<Format>());
+
+	thread::sleep(Duration::from_secs(2));
+
 	let entries = WalkDir::new(args.input_folder)
 		.max_depth(2)
 		.into_iter()
@@ -27,7 +34,7 @@ fn main() -> Result<()> {
 	for entry in entries {
 		let path = entry.path();
 
-		let Ok(mut file) = fs::File::open(path) else {
+		let Ok(mut file) = OpenOptions::new().read(true).write(true).open(path) else {
 			continue;
 		};
 
@@ -41,7 +48,7 @@ fn main() -> Result<()> {
 		let mut format = match serde_json::from_reader::<_, Format>(&file) {
 			Ok(f) => f,
 			Err(e) => {
-				println!("failed to parse: {e}");
+				cprintln!("{} - <r!>{e}", path.display());
 				errors += 1;
 				continue;
 			}
@@ -50,13 +57,15 @@ fn main() -> Result<()> {
 		file.rewind()?;
 
 		if modify(&mut format) {
+			file.set_len(0)?;
+
 			serde_json::to_writer(file, &format)?;
 
 			files_modified += 1;
 
-			cprintln!("{} - <green>modified</>", path.display());
+			cprintln!("{} - <b!>modified", path.display());
 		} else {
-			cprintln!("{} - <red>not modified</>", path.display());
+			cprintln!("{} - <g!>not modified", path.display());
 		}
 	}
 
@@ -67,6 +76,37 @@ fn main() -> Result<()> {
 	Ok(())
 }
 
-fn modify(_: &mut Format) -> bool {
-	false
+const DEFAULT_CHAR_SIZE: CharSize = CharSize {
+	width: 55,
+	height: 35,
+};
+
+fn modify(format: &mut Format) -> bool {
+	let original = format.clone();
+
+	// Barcodes
+	format.barcodes[0].position = Position { x: 140, y: 515 };
+	format.barcodes[0].height = 113;
+
+	format.barcodes[1].position = Position { x: 140, y: 735 };
+	format.barcodes[1].height = 113;
+
+	// Text
+	let mut first_text = true;
+
+	for text in format
+		.texts
+		.iter_mut()
+		.filter(|t| matches!(t.data_source, DataSource::Fixed) && t.data == "FastPass")
+	{
+		if first_text {
+			text.position = Position { x: 145, y: 640 };
+			first_text = false;
+		} else {
+			text.position = Position { x: 145, y: 860 };
+		}
+		text.size = DEFAULT_CHAR_SIZE;
+	}
+
+	*format != original
 }

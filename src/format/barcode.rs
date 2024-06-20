@@ -10,6 +10,7 @@ use super::Position;
 pub struct Barcode {
 	#[serde(flatten)]
 	pub position: Position,
+	pub height: i32,
 	#[serde(flatten)]
 	extra: HashMap<String, Value>,
 }
