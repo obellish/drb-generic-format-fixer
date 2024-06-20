@@ -31,10 +31,6 @@ fn main() -> Result<()> {
 			continue;
 		};
 
-		// let Ok(data) = fs::read_to_string(path) else {
-		// 	continue;
-		// };
-
 		if serde_json::from_reader::<_, serde_json::Value>(&file).is_err() {
 			continue;
 		}
