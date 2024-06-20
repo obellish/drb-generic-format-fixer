@@ -1,27 +1,21 @@
 mod barcode;
 mod common;
-mod rfid;
+mod text;
+
+use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 
-pub use self::{barcode::Barcode, common::*, rfid::Rfid};
+pub use self::{barcode::Barcode, common::*, text::Text};
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
 pub struct Format {
-	#[serde(rename = "labelName")]
-	pub name: String,
-	#[serde(rename = "labelWidth")]
-	pub width: i32,
-	#[serde(rename = "labelHeight")]
-	pub height: i32,
-	#[serde(rename = "hasRFID")]
-	pub has_rfid: bool,
-	#[serde(rename = "rfidType")]
-	pub rfid_type: String,
 	#[serde(rename = "labelBarcodes")]
 	pub barcodes: Vec<Barcode>,
-	#[serde(rename = "labelUHFRFID")]
-	pub rfid: Rfid,
-	#[serde(rename = "labelGraphicBox")]
-	pub graphic_boxes: Vec<serde_json::Value>,
+	#[serde(rename = "labelTexts")]
+	pub texts: Vec<Text>,
+	#[serde(flatten)]
+	extra: HashMap<String, Value>,
 }

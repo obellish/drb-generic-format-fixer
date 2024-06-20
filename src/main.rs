@@ -5,6 +5,7 @@ use clap::Parser as _;
 use drb_generic_format_fixer::{format::Format, Args};
 use walkdir::WalkDir;
 
+#[allow(warnings)]
 fn main() -> Result<()> {
 	let args = match Args::try_parse() {
 		Ok(args) => args,
@@ -15,6 +16,7 @@ fn main() -> Result<()> {
 	};
 
 	let entries = WalkDir::new(args.input_folder)
+		.max_depth(2)
 		.into_iter()
 		.filter_map(std::result::Result::ok);
 
@@ -24,31 +26,16 @@ fn main() -> Result<()> {
 
 	for entry in entries {
 		let path = entry.path();
-		if path.extension().is_some() {
-			continue;
-		}
 
 		let Ok(data) = fs::read_to_string(path) else {
 			continue;
 		};
-
-		// let Ok(mut reader) = File::open(path) else {
-		// 	continue;
-		// };
-
-		// let Ok(raw) = serde_json::from_reader::<_, serde_json::Value>(&reader) else {
-		// 	continue;
-		// };
 
 		if serde_json::from_str::<serde_json::Value>(&data).is_err() {
 			continue;
 		}
 
 		files_open += 1;
-
-		// let Ok(format) = serde_json::from_reader::<_, Format>(&reader) else {
-		// 	panic!("Failed to ");
-		// };
 
 		println!("{}", path.display());
 
