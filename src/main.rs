@@ -57,7 +57,7 @@ fn main() -> Result<()> {
 		};
 
 		if displayable.to_string().to_lowercase().contains("custom") {
-			cprintln!("{displayable} - <r!>found custom format");
+			cprintln!("{displayable} - <m!>found custom format");
 			skipped += 1;
 			continue;
 		}
@@ -65,7 +65,7 @@ fn main() -> Result<()> {
 		let barcode_count = format.barcodes.len();
 
 		if barcode_count != 2 {
-			cprintln!("{displayable} - <r!>expected 2 barcodes, got {barcode_count}");
+			cprintln!("{displayable} - <m!>expected 2 barcodes, got {barcode_count}");
 			skipped += 1;
 			continue;
 		}
@@ -75,7 +75,7 @@ fn main() -> Result<()> {
 			.iter()
 			.any(|b| b.position.x >= 1300 || b.position.y >= 1300)
 		{
-			cprintln!("{displayable} - <r!>barcode outside visible range");
+			cprintln!("{displayable} - <m!>barcode outside visible range");
 			skipped += 1;
 			continue;
 		}
@@ -85,7 +85,7 @@ fn main() -> Result<()> {
 		if modify(&mut format) {
 			file.set_len(0)?;
 
-			serde_json::to_writer(file, &format)?;
+			serde_json::to_writer(&file, &format)?;
 
 			files_modified += 1;
 
@@ -93,6 +93,8 @@ fn main() -> Result<()> {
 		} else {
 			cprintln!("{displayable} - <g!>not modified");
 		}
+
+		file.sync_all()?;
 	}
 
 	println!("errors: {errors}");
