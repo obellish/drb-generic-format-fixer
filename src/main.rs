@@ -36,6 +36,12 @@ fn main() -> Result<()> {
 		let path = entry.path();
 		let displayable = path.display();
 
+		if displayable.to_string().to_lowercase().contains("custom") {
+			cprintln!("{displayable} - <r!>found custom format");
+			skipped += 1;
+			continue;
+		}
+
 		let Ok(mut file) = OpenOptions::new().read(true).write(true).open(path) else {
 			continue;
 		};
