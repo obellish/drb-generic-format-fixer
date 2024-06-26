@@ -56,12 +56,6 @@ fn main() -> Result<()> {
 			}
 		};
 
-		if displayable.to_string().to_lowercase().contains("custom") {
-			cprintln!("{displayable} - <m!>found custom format");
-			skipped += 1;
-			continue;
-		}
-
 		let barcode_count = format.barcodes.len();
 
 		if barcode_count != 2 {
@@ -155,7 +149,7 @@ fn modify_human_readable_text(texts: &mut [Text]) {
 
 	for text in texts
 		.iter_mut()
-		.filter(|t| matches!(t.data_source, DataSource::HumanReadable))
+		.filter(|t| matches!(t.data_source, DataSource::HumanReadable) && t.position.y >= 350)
 	{
 		if first_text {
 			text.position = Position { x: 380, y: 640 };

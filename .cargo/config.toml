@@ -1,5 +1,5 @@
 [alias]
-rd = ["run", "--", "-i", "T:\\MPI Special Print Tool\\DRB 1 Pass\\Tidal Wave Auto Spa"]
+rd = ["run", "--", "-i", "C:\\Users\\obellish\\Documents\\DRB 1 Pass"]
 rr = ["run", "--release", "--", "-i", "T:\\MPI Special Print Tool\\DRB 1 Pass"]
 
 [target.'cfg(not(target_arch = "wasm32"))']
